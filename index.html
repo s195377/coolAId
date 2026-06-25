@@ -717,6 +717,8 @@
   function tickOverview() {
     overviewState.inputPower = rwOverview(overviewState.inputPower, 298, 304, 0.25);
     overviewState.outputPower = rwOverview(overviewState.outputPower, 297.5, 303.5, 0.25);
+    if (overviewState.outputPower >= overviewState.inputPower - 0.1)
+      overviewState.outputPower = +(overviewState.inputPower - 0.1 - Math.random() * 0.4).toFixed(2);
     const diff = +(overviewState.inputPower - overviewState.outputPower).toFixed(2);
     const pct = +((diff / overviewState.inputPower) * 100).toFixed(2);
     const overviewEls = { inputPower: document.getElementById('inputPower'), outputPower: document.getElementById('outputPower'), powerDiff: document.getElementById('powerDiff'), powerPct: document.getElementById('powerPct') };
