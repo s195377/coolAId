@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NKT Cooling System – Alarms</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0b0f1e;
+      color: #c8d4e8;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 178px;
+      min-width: 178px;
+      background: #0d1225;
+      border-right: 1px solid #1a2640;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-area {
+      padding: 14px 14px 12px;
+      border-bottom: 1px solid #1a2640;
+    }
+
+    .logo-box {
+      background: #fff;
+      color: #0b0f1e;
+      font-weight: 900;
+      font-size: 20px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 3px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .sys-name { font-weight: 700; font-size: 12px; color: #e0e6f0; }
+    .sys-sub  { font-size: 10px; color: #7a8ca8; }
+
+    nav { flex: 1; padding-top: 4px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #7a8ca8;
+      font-size: 12px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-item:hover { background: #1a2640; color: #c8d4e8; }
+
+    .nav-item.active {
+      background: #2a0a0a;
+      color: #ff4444;
+      border-left: 3px solid #ff4444;
+    }
+
+    .nav-icon { font-size: 13px; width: 18px; text-align: center; }
+
+    .badge {
+      margin-left: auto;
+      background: #ff4444;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    .sidebar-bottom {
+      padding: 12px 14px;
+      border-top: 1px solid #1a2640;
+    }
+
+    .ss-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a8ca8; margin-bottom: 4px; }
+
+    .ss-val {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #ff4444;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .dot-red {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ff4444;
+      box-shadow: 0 0 6px #ff4444;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{ opacity:1 } 50%{ opacity:0.3 } }
+
+    /* ── MAIN ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .page-hdr {
+      padding: 13px 18px 11px;
+      border-bottom: 1px solid #1a2640;
+    }
+
+    .page-title { font-size: 17px; font-weight: 700; color: #e0e6f0; letter-spacing: 1px; }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ── SUMMARY ROW ── */
+    .summary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr 0.65fr 1.3fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .ac {
+      border-radius: 8px;
+      padding: 12px 14px;
+      border: 1px solid;
+    }
+
+    .ac.crit   { background:#1a0808; border-color:#ff4444; }
+    .ac.high   { background:#1a0e00; border-color:#f97316; }
+    .ac.med    { background:#1a1600; border-color:#eab308; }
+    .ac.low    { background:#0f1225; border-color:#2a3f5e; }
+    .ac.total  { background:#0f1225; border-color:#2a3f5e; display:flex; flex-direction:column; justify-content:center; }
+    .ac.donut  { background:#0d1225; border-color:#1a2640; padding:12px; }
+
+    .ac-top { display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+    .ac-icon { font-size:17px; }
+    .ac-num  { font-size:22px; font-weight:700; }
+
+    .crit .ac-num  { color:#ff4444; }
+    .high .ac-num  { color:#f97316; }
+    .med  .ac-num  { color:#eab308; }
+    .low  .ac-num  { color:#94a3b8; }
+    .total .ac-num { color:#e0e6f0; font-size:28px; }
+
+    .ac-label { font-weight:700; font-size:11px; letter-spacing:1px; }
+    .crit .ac-label  { color:#ff4444; }
+    .high .ac-label  { color:#f97316; }
+    .med  .ac-label  { color:#eab308; }
+    .low  .ac-label  { color:#94a3b8; }
+
+    .ac-sub    { font-size:10px; color:#7a8ca8; margin-top:3px; }
+    .total-lbl { font-size:10px; color:#7a8ca8; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+
+    /* Donut */
+    .donut-title { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#7a8ca8; margin-bottom:8px; }
+    .donut-inner { display:flex; gap:10px; align-items:center; }
+    .donut-wrap  { width:74px; height:74px; flex-shrink:0; }
+
+    .dl { display:flex; flex-direction:column; gap:3px; flex:1; }
+    .dl-row { display:flex; align-items:center; gap:5px; font-size:10px; color:#7a8ca8; }
+    .dl-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+    .donut-total { font-size:10px; color:#7a8ca8; margin-top:6px; padding-top:5px; border-top:1px solid #1a2640; }
+
+    /* ── SYSTEM OVERVIEW ── */
+    .card {
+      background:#0d1225;
+      border:1px solid #1a2640;
+      border-radius:8px;
+      padding:12px 14px;
+    }
+
+    .sec-title {
+      font-size:11px; font-weight:700; letter-spacing:1px;
+      text-transform:uppercase; color:#e0e6f0; margin-bottom:10px;
+    }
+
+    .cable-row { display:flex; align-items:center; width:100%; }
+
+    .end-node {
+      display:flex; flex-direction:column; align-items:center;
+      gap:2px; min-width:64px;
+    }
+
+    .en-lbl { font-size:9px; color:#94a3b8; }
+    .en-icon { font-size:22px; }
+    .en-meta { font-size:9px; color:#7a8ca8; }
+    .en-val  { font-size:11px; font-weight:700; color:#22c55e; }
+
+    .seg {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      gap:2px; min-width:24px;
+    }
+
+    .seg-line {
+      width:100%; height:4px; background:#1e2d4a; position:relative;
+    }
+
+    .seg-line::before {
+      content:'';
+      position:absolute; top:50%; left:0; right:0; height:2px;
+      transform:translateY(-50%);
+      background: repeating-linear-gradient(90deg, #4a9eff 0 5px, transparent 5px 10px);
+      animation: flow 0.8s linear infinite;
+    }
+
+    @keyframes flow { from{background-position:0 0} to{background-position:10px 0} }
+
+    .seg-dist { font-size:9px; color:#7a8ca8; }
+
+    .cu-node { display:flex; flex-direction:column; align-items:center; }
+
+    .cu-box {
+      border:2px solid; border-radius:6px; padding:6px 10px;
+      text-align:center; min-width:96px; background:#0f1830;
+    }
+
+    .cu-box.bc-crit { border-color:#ff4444; }
+    .cu-box.bc-high { border-color:#f97316; }
+    .cu-box.bc-ok   { border-color:#22c55e; }
+
+    .cu-hdr { display:flex; align-items:center; justify-content:center; gap:5px; margin-bottom:3px; }
+    .cu-name { font-size:11px; font-weight:700; color:#e0e6f0; }
+    .cu-sicon { font-size:13px; }
+    .cu-icon { font-size:20px; margin-bottom:3px; }
+    .cu-m { font-size:10px; display:flex; align-items:center; gap:3px; line-height:1.6; }
+    .cu-mv { font-weight:700; font-size:11px; }
+    .cu-mv.cr { color:#ff4444; }
+    .cu-mv.or { color:#f97316; }
+    .cu-mv.gn { color:#22c55e; }
+
+    .ruler {
+      display:flex; justify-content:space-between; margin-top:8px;
+      padding-top:5px; border-top:1px solid #1a2640;
+      font-size:9px; color:#7a8ca8;
+    }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      display:flex; align-items:center; gap:8px;
+      background:#0d1225; border:1px solid #1a2640;
+      border-radius:8px; padding:9px 12px;
+    }
+
+    .search-wrap {
+      display:flex; align-items:center; gap:5px;
+      background:#0b0f1e; border:1px solid #1a2640;
+      border-radius:6px; padding:5px 8px; flex:0 0 170px;
+    }
+
+    .search-wrap input {
+      background:transparent; border:none; outline:none;
+      color:#c8d4e8; font-size:12px; width:100%;
+    }
+
+    .search-wrap input::placeholder { color:#7a8ca8; }
+
+    select {
+      background:#0b0f1e; border:1px solid #1a2640;
+      border-radius:6px; color:#c8d4e8;
+      padding:5px 24px 5px 8px; font-size:12px; cursor:pointer;
+      appearance:none; -webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a8ca8'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 7px center;
+    }
+
+    .filter-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+
+    .show-ack { display:flex; align-items:center; gap:5px; font-size:12px; color:#7a8ca8; cursor:pointer; }
+    .show-ack input { accent-color:#4a9eff; }
+
+    .btn-export {
+      display:flex; align-items:center; gap:5px;
+      background:transparent; border:1px solid #2a3f5e;
+      border-radius:6px; color:#4a9eff; padding:5px 11px;
+      font-size:12px; cursor:pointer;
+    }
+
+    .btn-export:hover { background:#1a2640; }
+
+    /* ── BOTTOM SPLIT ── */
+    .bottom-split {
+      display:grid; grid-template-columns:1fr 270px; gap:10px;
+    }
+
+    /* TABLE CARD */
+    .table-card {
+      background:#0d1225; border:1px solid #1a2640;
+      border-radius:8px; overflow:hidden; display:flex; flex-direction:column;
+    }
+
+    .table-hdr {
+      padding:10px 12px; border-bottom:1px solid #1a2640;
+      font-size:12px; font-weight:700; color:#e0e6f0;
+    }
+
+    .table-scroll { overflow-x:auto; flex:1; }
+
+    table.at { width:100%; border-collapse:collapse; font-size:11px; }
+
+    table.at th {
+      padding:7px 9px; text-align:left; color:#7a8ca8;
+      font-size:10px; font-weight:600; letter-spacing:0.4px;
+      text-transform:uppercase; border-bottom:1px solid #1a2640;
+      white-space:nowrap;
+    }
+
+    table.at td {
+      padding:7px 9px; border-bottom:1px solid #0f1830;
+      vertical-align:middle; white-space:nowrap;
+    }
+
+    table.at tbody tr:hover td { background:#0f1830; cursor:pointer; }
+    table.at tbody tr.sel td   { background:#1a2640; }
+
+    .sev-badge {
+      padding:2px 7px; border-radius:4px; font-size:10px;
+      font-weight:700; display:inline-block;
+    }
+
+    .sev-badge.critical { background:#ff444420; color:#ff4444; border:1px solid #ff444450; }
+    .sev-badge.high     { background:#f9731620; color:#f97316; border:1px solid #f9731650; }
+    .sev-badge.medium   { background:#eab30820; color:#eab308; border:1px solid #eab30850; }
+    .sev-badge.low      { background:#3a4f6e20; color:#94a3b8; border:1px solid #3a4f6e60; }
+
+    .stat-badge {
+      padding:2px 7px; border-radius:4px; font-size:10px;
+      font-weight:700; background:#ff444420; color:#ff4444; border:1px solid #ff444450;
+    }
+
+    .vc { font-weight:700; }
+    .vc.cr { color:#ff4444; }
+    .vc.or { color:#f97316; }
+    .vc.yw { color:#eab308; }
+
+    .act-btn {
+      background:transparent; border:none; color:#7a8ca8;
+      cursor:pointer; padding:2px 5px; border-radius:4px; font-size:13px;
+    }
+
+    .act-btn:hover { color:#4a9eff; background:#1a2640; }
+
+    .tbl-foot {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:7px 12px; border-top:1px solid #1a2640; font-size:11px; color:#7a8ca8;
+    }
+
+    .pagi { display:flex; align-items:center; gap:3px; }
+
+    .pg-btn {
+      background:transparent; border:1px solid #1a2640; color:#7a8ca8;
+      padding:3px 8px; border-radius:4px; cursor:pointer; font-size:11px;
+    }
+
+    .pg-btn.active { background:#1e3a6e; color:#4a9eff; border-color:#4a9eff; }
+    .pg-btn:hover:not(.active) { background:#1a2640; color:#c8d4e8; }
+
+    /* DETAIL CARD */
+    .detail-card {
+      background:#0d1225; border:1px solid #1a2640;
+      border-radius:8px; padding:12px; display:flex;
+      flex-direction:column; gap:0;
+    }
+
+    .detail-title {
+      font-size:11px; font-weight:700; text-transform:uppercase;
+      letter-spacing:1px; color:#e0e6f0; margin-bottom:8px;
+    }
+
+    .d-row {
+      display:flex; justify-content:space-between; align-items:flex-start;
+      padding:5px 0; border-bottom:1px solid #0f1830; font-size:11px;
+    }
+
+    .d-row:last-of-type { border-bottom:none; }
+    .d-key { color:#7a8ca8; flex-shrink:0; padding-right:8px; }
+    .d-val { color:#e0e6f0; font-weight:600; text-align:right; max-width:140px; word-break:break-word; }
+    .d-val.cr { color:#ff4444; }
+    .d-val.or { color:#f97316; }
+
+    .btn-vud {
+      width:100%; margin-top:10px;
+      background:#1e3a6e; color:#4a9eff;
+      border:none; border-radius:6px; padding:10px;
+      font-size:12px; font-weight:700; cursor:pointer; letter-spacing:0.4px;
+    }
+
+    .btn-vud:hover { background:#2a4f8e; }
+
+    /* ── FOOTER ── */
+    .page-footer {
+      padding:7px 16px; border-top:1px solid #1a2640;
+      display:flex; justify-content:space-between;
+      font-size:10px; color:#7a8ca8;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes flash { 0%,100%{opacity:1} 40%{opacity:0.3} }
+    .flash { animation: flash 0.4s ease; }
+
+    @keyframes newRow { from{background:#ff444420} to{background:transparent} }
+    .new-alarm td { animation: newRow 2.5s ease forwards; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo-box">NKT</div>
+    <div class="sys-name">COOLING SYSTEM</div>
+    <div class="sys-sub">Superconductor Cable</div>
+  </div>
+  <nav>
+    <div class="nav-item"><span class="nav-icon">⊞</span> Dashboard</div>
+    <div class="nav-item"><span class="nav-icon">◉</span> System Overview</div>
+    <div class="nav-item"><span class="nav-icon">❄</span> Cooling Units</div>
+    <div class="nav-item active"><span class="nav-icon">🔔</span> Alarms <span class="badge" id="navBadge">5</span></div>
+    <div class="nav-item"><span class="nav-icon">↗</span> Trends</div>
+    <div class="nav-item"><span class="nav-icon">📅</span> Events</div>
+    <div class="nav-item"><span class="nav-icon">🗄</span> Data Log</div>
+    <div class="nav-item"><span class="nav-icon">📊</span> Reports</div>
+    <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="ss-label">System Status</div>
+    <div class="ss-val"><div class="dot-red"></div> ALARM</div>
+  </div>
+</aside>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<div class="main">
+  <div class="page-hdr">
+    <div class="page-title">ALARMS</div>
+  </div>
+
+  <div class="content">
+
+    <!-- SUMMARY ROW -->
+    <div class="summary-row">
+      <div class="ac crit">
+        <div class="ac-top">
+          <span class="ac-icon" style="color:#ff4444">🔔</span>
+          <span class="ac-num" id="cCrit">2</span>
+        </div>
+        <div class="ac-label">CRITICAL</div>
+        <div class="ac-sub" id="sCrit">Affects 2 Units</div>
+      </div>
+      <div class="ac high">
+        <div class="ac-top">
+          <span class="ac-icon" style="color:#f97316">🔔</span>
+          <span class="ac-num" id="cHigh">3</span>
+        </div>
+        <div class="ac-label">HIGH</div>
+        <div class="ac-sub" id="sHigh">Affects 2 Units</div>
+      </div>
+      <div class="ac med">
+        <div class="ac-top">
+          <span class="ac-icon" style="color:#eab308">🔔</span>
+          <span class="ac-num" id="cMed">4</span>
+        </div>
+        <div class="ac-label">MEDIUM</div>
+        <div class="ac-sub" id="sMed">Affects 3 Units</div>
+      </div>
+      <div class="ac low">
+        <div class="ac-top">
+          <span class="ac-icon" style="color:#94a3b8">🔔</span>
+          <span class="ac-num" id="cLow">12</span>
+        </div>
+        <div class="ac-label" style="color:#94a3b8">LOW</div>
+        <div class="ac-sub" id="sLow">Affects 4 Units</div>
+      </div>
+      <div class="ac total">
+        <div class="total-lbl">Total Active</div>
+        <div class="ac-num" id="cTotal">21</div>
+      </div>
+      <!-- Donut -->
+      <div class="ac donut">
+        <div class="donut-title">Alarm Summary</div>
+        <div class="donut-inner">
+          <div class="donut-wrap">
+            <canvas id="donutChart" width="74" height="74"></canvas>
+          </div>
+          <div class="dl">
+            <div class="dl-row"><div class="dl-dot" style="background:#ff4444"></div><span id="dlCrit">Critical &nbsp;2 (10%)</span></div>
+            <div class="dl-row"><div class="dl-dot" style="background:#f97316"></div><span id="dlHigh">High &nbsp;&nbsp;&nbsp;&nbsp;3 (14%)</span></div>
+            <div class="dl-row"><div class="dl-dot" style="background:#eab308"></div><span id="dlMed">Medium 4 (19%)</span></div>
+            <div class="dl-row"><div class="dl-dot" style="background:#3b82f6"></div><span id="dlLow">Low &nbsp;&nbsp;&nbsp;&nbsp;12 (57%)</span></div>
+            <div class="donut-total">Total &nbsp;<strong id="dlTotal">21</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM OVERVIEW -->
+    <div class="card">
+      <div class="sec-title">System Overview</div>
+      <div class="cable-row">
+
+        <div class="end-node">
+          <div class="en-lbl">Substation</div>
+          <div class="en-icon">🏭</div>
+          <div class="en-meta">Voltage</div>
+          <div class="en-val" id="voltL">245.7 kV</div>
+        </div>
+
+        <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+
+        <div class="cu-node">
+          <div class="cu-box bc-crit" id="cu1box">
+            <div class="cu-hdr"><span class="cu-name">CU-1</span><span class="cu-sicon" id="cu1si">❗</span></div>
+            <div class="cu-icon">❄</div>
+            <div class="cu-m">🌡 <span class="cu-mv cr" id="cu1t">77.3 K</span></div>
+            <div class="cu-m">⊙ <span class="cu-mv cr" id="cu1p">20.0 atm</span></div>
+          </div>
+        </div>
+
+        <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+
+        <div class="cu-node">
+          <div class="cu-box bc-high" id="cu2box">
+            <div class="cu-hdr"><span class="cu-name">CU-2</span><span class="cu-sicon" id="cu2si">❗</span></div>
+            <div class="cu-icon">❄</div>
+            <div class="cu-m">🌡 <span class="cu-mv or" id="cu2t">76.7 K</span></div>
+            <div class="cu-m">⊙ <span class="cu-mv or" id="cu2p">19.9 atm</span></div>
+          </div>
+        </div>
+
+        <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+
+        <div class="cu-node">
+          <div class="cu-box bc-ok" id="cu3box">
+            <div class="cu-hdr"><span class="cu-name">CU-3</span><span class="cu-sicon" id="cu3si">✅</span></div>
+            <div class="cu-icon">❄</div>
+            <div class="cu-m">🌡 <span class="cu-mv gn" id="cu3t">77.1 K</span></div>
+            <div class="cu-m">⊙ <span class="cu-mv gn" id="cu3p">19.8 atm</span></div>
+          </div>
+        </div>
+
+        <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+
+        <div class="cu-node">
+          <div class="cu-box bc-high" id="cu4box">
+            <div class="cu-hdr"><span class="cu-name">CU-4</span><span class="cu-sicon" id="cu4si">❗</span></div>
+            <div class="cu-icon">❄</div>
+            <div class="cu-m">🌡 <span class="cu-mv or" id="cu4t">78.3 K</span></div>
+            <div class="cu-m">⊙ <span class="cu-mv or" id="cu4p">20.1 atm</span></div>
+          </div>
+        </div>
+
+        <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+
+        <div class="end-node">
+          <div class="en-lbl">Grid</div>
+          <div class="en-icon">⚡</div>
+          <div class="en-meta">Voltage</div>
+          <div class="en-val" id="voltR">246.1 kV</div>
+        </div>
+      </div>
+      <div class="ruler">
+        <span>0 km</span><span>25 km</span><span>50 km</span><span>75 km</span><span>100 km</span><span>125 km</span>
+      </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span style="color:#7a8ca8;font-size:12px">🔍</span>
+        <input type="text" id="srch" placeholder="Search alarms..." />
+      </div>
+      <select id="sevF"><option value="">All Severity</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
+      <select id="unitF"><option value="">All Units</option><option>CU-1</option><option>CU-2</option><option>CU-3</option><option>CU-4</option></select>
+      <select id="statF"><option value="">All Status</option><option>ACTIVE</option></select>
+      <div class="filter-right">
+        <label class="show-ack"><input type="checkbox" /> Show Acknowledged</label>
+        <button class="btn-export">↑ EXPORT</button>
+      </div>
+    </div>
+
+    <!-- BOTTOM SPLIT -->
+    <div class="bottom-split">
+
+      <!-- ALARM TABLE -->
+      <div class="table-card">
+        <div class="table-hdr" id="tblHdr">ACTIVE ALARMS (21)</div>
+        <div class="table-scroll">
+          <table class="at">
+            <thead>
+              <tr>
+                <th>Time</th><th>Severity</th><th>Unit</th><th>Parameter</th>
+                <th>Message</th><th>Value</th><th>Threshold</th>
+                <th>Status</th><th>Duration</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="tbl-foot">
+          <span>Rows per page: <b>10</b></span>
+          <span id="rowRange">1–10 of 21</span>
+          <div class="pagi">
+            <button class="pg-btn">«</button>
+            <button class="pg-btn">‹</button>
+            <button class="pg-btn active" id="p1">1</button>
+            <button class="pg-btn" id="p2">2</button>
+            <button class="pg-btn" id="p3">3</button>
+            <button class="pg-btn">›</button>
+            <button class="pg-btn">»</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALARM DETAILS -->
+      <div class="detail-card">
+        <div class="detail-title">Alarm Details</div>
+        <div id="detailBody"></div>
+        <button class="btn-vud">VIEW UNIT DETAILS</button>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="page-footer">
+    <span>NKT Cooling System Platform</span>
+    <span>© 2024 NKT A/S</span>
+  </footer>
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════ */
+const rw = (v, lo, hi, step) =>
+  Math.min(hi, Math.max(lo, +(v + (Math.random() - 0.5) * step * 2).toFixed(2)));
+
+const fmtHMS  = d => d.toTimeString().slice(0, 8);
+const fmtHM   = d => d.toTimeString().slice(0, 5);
+const fmtDur  = start => {
+  const s = Math.floor((Date.now() - start.getTime()) / 1000);
+  return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60]
+    .map(n => String(n).padStart(2,'0')).join(':');
+};
+
+function ago(secs) { return new Date(Date.now() - secs * 1000); }
+
+/* ════════════════════════════════════════
+   ALARM DATA
+════════════════════════════════════════ */
+let alarms = [
+  { id:1,  time:ago(272), sev:'CRITICAL', unit:'CU-1', param:'Temperature', msg:'Temperature above critical threshold', v:77.3, uv:'K',    thr:'> 82.0 K'   },
+  { id:2,  time:ago(318), sev:'CRITICAL', unit:'CU-4', param:'Pressure',    msg:'Pressure below critical threshold',    v:17.5, uv:'atm',  thr:'< 18.0 atm' },
+  { id:3,  time:ago(390), sev:'HIGH',     unit:'CU-1', param:'Flow',        msg:'Flow out of range',                    v:8.1,  uv:'kg/s', thr:'< 10.0 kg/s'},
+  { id:4,  time:ago(473), sev:'HIGH',     unit:'CU-2', param:'Temperature', msg:'Temperature above high threshold',     v:76.7, uv:'K',    thr:'> 78.0 K'   },
+  { id:5,  time:ago(538), sev:'HIGH',     unit:'CU-3', param:'Pressure',    msg:'Pressure above alarm threshold',       v:20.9, uv:'atm',  thr:'> 20.7 atm' },
+  { id:6,  time:ago(556), sev:'MEDIUM',   unit:'CU-4', param:'Pump System', msg:'Pump running at reduced efficiency',   v:null, uv:'',     thr:null         },
+  { id:7,  time:ago(590), sev:'MEDIUM',   unit:'CU-2', param:'Pressure',    msg:'Pressure above high threshold',        v:20.8, uv:'atm',  thr:'> 20.5 atm' },
+  { id:8,  time:ago(632), sev:'MEDIUM',   unit:'CU-1', param:'Vibration',   msg:'Vibration level elevated',             v:2.4,  uv:'mm/s', thr:'> 2.2 mm/s' },
+  { id:9,  time:ago(665), sev:'MEDIUM',   unit:'CU-3', param:'Pump System', msg:'Pump efficiency below nominal',        v:null, uv:'',     thr:null         },
+  { id:10, time:ago(700), sev:'LOW',      unit:'CU-3', param:'Temperature', msg:'Temperature deviation high',           v:75.8, uv:'K',    thr:'> 75.0 K'   },
+  { id:11, time:ago(740), sev:'LOW',      unit:'CU-3', param:'Pressure',    msg:'Pressure deviation high',              v:20.6, uv:'atm',  thr:'> 20.5 atm' },
+  { id:12, time:ago(780), sev:'LOW',      unit:'CU-2', param:'Flow',        msg:'Flow slightly below nominal',          v:9.8,  uv:'kg/s', thr:'< 10.0 kg/s'},
+  { id:13, time:ago(820), sev:'LOW',      unit:'CU-1', param:'Vibration',   msg:'Vibration above threshold',            v:2.1,  uv:'mm/s', thr:'> 2.0 mm/s' },
+  { id:14, time:ago(860), sev:'LOW',      unit:'CU-4', param:'Vibration',   msg:'Vibration above threshold',            v:2.3,  uv:'mm/s', thr:'> 2.0 mm/s' },
+  { id:15, time:ago(900), sev:'LOW',      unit:'CU-1', param:'Pressure',    msg:'Pressure slightly elevated',           v:20.7, uv:'atm',  thr:'> 20.5 atm' },
+  { id:16, time:ago(940), sev:'LOW',      unit:'CU-2', param:'Vibration',   msg:'Vibration above threshold',            v:2.0,  uv:'mm/s', thr:'> 2.0 mm/s' },
+  { id:17, time:ago(980), sev:'LOW',      unit:'CU-4', param:'Temperature', msg:'Temperature deviation detected',       v:76.2, uv:'K',    thr:'> 76.0 K'   },
+  { id:18, time:ago(1020),sev:'LOW',      unit:'CU-1', param:'Flow',        msg:'Flow slightly below nominal',          v:9.5,  uv:'kg/s', thr:'< 10.0 kg/s'},
+  { id:19, time:ago(1060),sev:'LOW',      unit:'CU-3', param:'Pressure',    msg:'Pressure slightly elevated',           v:20.6, uv:'atm',  thr:'> 20.5 atm' },
+  { id:20, time:ago(1100),sev:'LOW',      unit:'CU-2', param:'Temperature', msg:'Temperature deviation detected',       v:75.9, uv:'K',    thr:'> 75.0 K'   },
+  { id:21, time:ago(1140),sev:'LOW',      unit:'CU-4', param:'Flow',        msg:'Flow slightly below nominal',          v:9.6,  uv:'kg/s', thr:'< 10.0 kg/s'},
+];
+
+let selId = 1;
+let page  = 1;
+const PER = 10;
+
+/* ════════════════════════════════════════
+   DONUT CHART
+════════════════════════════════════════ */
+const donut = new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    datasets: [{ data:[2,3,4,12], backgroundColor:['#ff4444','#f97316','#eab308','#3b82f6'], borderWidth:0 }],
+  },
+  options: {
+    responsive: false,
+    cutout: '68%',
+    plugins: { legend:{ display:false }, tooltip:{ enabled:false } },
+    animation: { duration:500 },
+  },
+});
+
+/* ════════════════════════════════════════
+   FILTERING
+════════════════════════════════════════ */
+function filtered() {
+  const q  = document.getElementById('srch').value.toLowerCase();
+  const sv = document.getElementById('sevF').value;
+  const un = document.getElementById('unitF').value;
+  return alarms.filter(a => {
+    if (sv && a.sev  !== sv) return false;
+    if (un && a.unit !== un) return false;
+    if (q  && ![a.msg, a.param, a.unit].some(s => s.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+/* ════════════════════════════════════════
+   RENDER TABLE
+════════════════════════════════════════ */
+function vcls(sev) {
+  return { CRITICAL:'cr', HIGH:'or', MEDIUM:'yw' }[sev] || '';
+}
+
+function renderTable() {
+  const rows  = filtered();
+  const total = rows.length;
+  const start = (page - 1) * PER;
+  const slice = rows.slice(start, start + PER);
+
+  document.getElementById('tblHdr').textContent  = `ACTIVE ALARMS (${total})`;
+  document.getElementById('rowRange').textContent = `${start+1}–${Math.min(start+PER,total)} of ${total}`;
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  slice.forEach(a => {
+    const tr = document.createElement('tr');
+    if (a.id === selId) tr.classList.add('sel');
+    const valStr = a.v !== null ? `${a.v.toFixed(1)} ${a.uv}` : '—';
+    const thrStr = a.thr || '—';
+
+    tr.innerHTML = `
+      <td>${fmtHMS(a.time)}</td>
+      <td><span class="sev-badge ${a.sev.toLowerCase()}">${a.sev}</span></td>
+      <td>${a.unit}</td>
+      <td>${a.param}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${a.msg}</td>
+      <td class="vc ${vcls(a.sev)}" id="v${a.id}">${valStr}</td>
+      <td style="color:#7a8ca8">${thrStr}</td>
+      <td><span class="stat-badge">ACTIVE</span></td>
+      <td id="d${a.id}">${fmtDur(a.time)}</td>
+      <td><button class="act-btn" title="View">👁</button><button class="act-btn" title="Ack">✓</button></td>
+    `;
+    tr.addEventListener('click', () => { selId = a.id; renderTable(); renderDetail(); });
+    tbody.appendChild(tr);
+  });
+
+  // pagination
+  const pages = Math.ceil(total / PER);
+  ['p1','p2','p3'].forEach((id, i) => {
+    const btn = document.getElementById(id);
+    const n   = i + 1;
+    btn.textContent = n <= pages ? n : '';
+    btn.classList.toggle('active', page === n);
+    btn.onclick = () => { if (n <= pages) { page = n; renderTable(); } };
+  });
+}
+
+/* ════════════════════════════════════════
+   RENDER DETAIL
+════════════════════════════════════════ */
+const SEV_COLOR = { CRITICAL:'#ff4444', HIGH:'#f97316', MEDIUM:'#eab308', LOW:'#94a3b8' };
+
+function renderDetail() {
+  const a = alarms.find(x => x.id === selId) || alarms[0];
+  const rows = [
+    ['Severity',        `<span style="color:${SEV_COLOR[a.sev]};font-weight:700">${a.sev}</span>`],
+    ['Unit',            a.unit],
+    ['Parameter',       a.param],
+    ['Message',         a.msg],
+    ['Value',           a.v !== null ? `${a.v.toFixed(1)} ${a.uv}` : '—'],
+    ['Threshold',       a.thr || '—'],
+    ['Status',          '<span style="color:#ff4444;font-weight:700">ACTIVE</span>'],
+    ['Duration',        `<span id="detDur">${fmtDur(a.time)}</span>`],
+    ['Acknowledged',    'No'],
+    ['Acknowledged By', '—'],
+    ['Acknowledged At', '—'],
+  ];
+  document.getElementById('detailBody').innerHTML =
+    rows.map(([k,v]) => `<div class="d-row"><span class="d-key">${k}</span><span class="d-val">${v}</span></div>`).join('');
+}
+
+/* ════════════════════════════════════════
+   SUMMARY COUNTS
+════════════════════════════════════════ */
+function updateSummary() {
+  const cnt = { CRITICAL:0, HIGH:0, MEDIUM:0, LOW:0 };
+  const unt = { CRITICAL:new Set(), HIGH:new Set(), MEDIUM:new Set(), LOW:new Set() };
+  alarms.forEach(a => { cnt[a.sev]++; unt[a.sev].add(a.unit); });
+  const tot = alarms.length;
+
+  document.getElementById('cCrit').textContent  = cnt.CRITICAL;
+  document.getElementById('cHigh').textContent  = cnt.HIGH;
+  document.getElementById('cMed').textContent   = cnt.MEDIUM;
+  document.getElementById('cLow').textContent   = cnt.LOW;
+  document.getElementById('cTotal').textContent = tot;
+  document.getElementById('navBadge').textContent = cnt.CRITICAL + cnt.HIGH;
+
+  document.getElementById('sCrit').textContent = `Affects ${unt.CRITICAL.size} Unit${unt.CRITICAL.size!==1?'s':''}`;
+  document.getElementById('sHigh').textContent = `Affects ${unt.HIGH.size} Unit${unt.HIGH.size!==1?'s':''}`;
+  document.getElementById('sMed').textContent  = `Affects ${unt.MEDIUM.size} Unit${unt.MEDIUM.size!==1?'s':''}`;
+  document.getElementById('sLow').textContent  = `Affects ${unt.LOW.size} Unit${unt.LOW.size!==1?'s':''}`;
+
+  donut.data.datasets[0].data = [cnt.CRITICAL, cnt.HIGH, cnt.MEDIUM, cnt.LOW];
+  donut.update('none');
+
+  const p = sev => tot > 0 ? Math.round(cnt[sev]/tot*100) : 0;
+  document.getElementById('dlCrit').textContent = `Critical  ${cnt.CRITICAL} (${p('CRITICAL')}%)`;
+  document.getElementById('dlHigh').textContent = `High      ${cnt.HIGH} (${p('HIGH')}%)`;
+  document.getElementById('dlMed').textContent  = `Medium ${cnt.MEDIUM} (${p('MEDIUM')}%)`;
+  document.getElementById('dlLow').textContent  = `Low      ${cnt.LOW} (${p('LOW')}%)`;
+  document.getElementById('dlTotal').textContent = tot;
+}
+
+/* ════════════════════════════════════════
+   CU STATE
+════════════════════════════════════════ */
+const cu = {
+  1:{ t:77.3, p:20.0, tLo:74, tHi:84, pLo:17, pHi:22 },
+  2:{ t:76.7, p:19.9, tLo:73, tHi:82, pLo:18, pHi:22 },
+  3:{ t:77.1, p:19.8, tLo:74, tHi:80, pLo:18, pHi:22 },
+  4:{ t:78.3, p:20.1, tLo:75, tHi:84, pLo:16, pHi:22 },
+};
+
+/* ════════════════════════════════════════
+   TICK
+════════════════════════════════════════ */
+let tick = 0;
+let nextId = 100;
+
+const NEW_ALARM_TEMPLATES = [
+  { sev:'LOW',    param:'Temperature', msg:'Temperature deviation detected',   uv:'K',    thr:'> 75.0 K',    vRange:[75.1,76.5] },
+  { sev:'LOW',    param:'Pressure',    msg:'Pressure slightly elevated',        uv:'atm',  thr:'> 20.5 atm',  vRange:[20.6,21.0] },
+  { sev:'LOW',    param:'Flow',        msg:'Flow slightly below nominal',       uv:'kg/s', thr:'< 10.0 kg/s', vRange:[9.4,9.9]   },
+  { sev:'LOW',    param:'Vibration',   msg:'Vibration above threshold',         uv:'mm/s', thr:'> 2.0 mm/s',  vRange:[2.1,2.4]   },
+  { sev:'MEDIUM', param:'Temperature', msg:'Temperature approaching high limit',uv:'K',    thr:'> 78.0 K',    vRange:[77.0,78.0] },
+];
+
+function doTick() {
+  tick++;
+
+  /* 1 — update durations in table */
+  alarms.forEach(a => {
+    const el = document.getElementById('d' + a.id);
+    if (el) el.textContent = fmtDur(a.time);
+  });
+  const detEl = document.getElementById('detDur');
+  if (detEl) {
+    const sel = alarms.find(a => a.id === selId);
+    if (sel) detEl.textContent = fmtDur(sel.time);
+  }
+
+  /* 2 — every 3 s: fluctuate CU values + alarm values */
+  if (tick % 3 === 0) {
+    [1,2,3,4].forEach(n => {
+      cu[n].t = rw(cu[n].t, cu[n].tLo, cu[n].tHi, 0.12);
+      cu[n].p = rw(cu[n].p, cu[n].pLo, cu[n].pHi, 0.07);
+      document.getElementById('cu'+n+'t').textContent = cu[n].t.toFixed(1) + ' K';
+      document.getElementById('cu'+n+'p').textContent = cu[n].p.toFixed(1) + ' atm';
+    });
+
+    // Voltage
+    document.getElementById('voltL').textContent = rw(245.7, 244.5, 247.0, 0.1).toFixed(1) + ' kV';
+    document.getElementById('voltR').textContent = rw(246.1, 244.8, 247.5, 0.1).toFixed(1) + ' kV';
+
+    // Alarm values
+    alarms.forEach(a => {
+      if (a.v === null) return;
+      const step = { K:0.08, atm:0.05, 'kg/s':0.06, 'mm/s':0.02 }[a.uv] || 0.05;
+      a.v = rw(a.v, a.v - 0.8, a.v + 0.8, step);
+      const el = document.getElementById('v' + a.id);
+      if (el) el.textContent = `${a.v.toFixed(1)} ${a.uv}`;
+    });
+
+    renderDetail();
+  }
+
+  /* 3 — every ~18 s: inject a new incoming alarm */
+  if (tick % 18 === 0) {
+    const tpl  = NEW_ALARM_TEMPLATES[Math.floor(Math.random() * NEW_ALARM_TEMPLATES.length)];
+    const unit = ['CU-1','CU-2','CU-3','CU-4'][Math.floor(Math.random() * 4)];
+    const val  = +(tpl.vRange[0] + Math.random() * (tpl.vRange[1] - tpl.vRange[0])).toFixed(1);
+
+    alarms.unshift({
+      id:   ++nextId,
+      time: new Date(),
+      sev:  tpl.sev,
+      unit,
+      param: tpl.param,
+      msg:   tpl.msg,
+      v:     val,
+      uv:    tpl.uv,
+      thr:   tpl.thr,
+    });
+
+    if (alarms.length > 35) alarms.pop();
+
+    updateSummary();
+    renderTable();
+
+    // Flash the new top row
+    const firstRow = document.querySelector('#tbody tr');
+    if (firstRow) firstRow.classList.add('new-alarm');
+  }
+}
+
+/* ════════════════════════════════════════
+   FILTER LISTENERS
+════════════════════════════════════════ */
+['srch','sevF','unitF','statF'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { page = 1; renderTable(); });
+});
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+updateSummary();
+renderTable();
+renderDetail();
+setInterval(doTick, 1000);
+</script>
+</body>
+</html>

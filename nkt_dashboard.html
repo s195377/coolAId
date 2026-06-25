@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NKT Cooling System Platform</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0b0f1e;
+      color: #c8d4e8;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 165px;
+      min-width: 165px;
+      background: #0d1225;
+      border-right: 1px solid #1a2640;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo { padding: 16px 14px 12px; }
+
+    .logo-box {
+      background: #fff;
+      color: #0b0f1e;
+      font-weight: 900;
+      font-size: 20px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      letter-spacing: 3px;
+      display: inline-block;
+    }
+
+    nav { margin-top: 6px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #7a8ca8;
+      transition: background 0.15s, color 0.15s;
+      font-size: 13px;
+    }
+
+    .nav-item:hover { background: #1a2640; color: #c8d4e8; }
+
+    .nav-item.active {
+      background: #1e3a6e;
+      color: #4a9eff;
+      border-left: 3px solid #4a9eff;
+    }
+
+    .alarm-nav-active { background: #2a0a0a; color: #ff4444; border-left: 3px solid #ff4444; }
+    .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+    .nav-badge { margin-left: auto; background: #ff4444; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; display: none; }
+    .nav-badge.visible { display: inline-block; }
+
+    .sidebar-bottom { margin-top: auto; padding: 14px; }
+
+    .status-box {
+      background: #0f1830;
+      border: 1px solid #1a2640;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+
+    .status-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .big-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .dot.alarm,
+    .big-dot.alarm {
+      background: #ff4444;
+      box-shadow: 0 0 8px #ff4444;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 4px #22c55e; }
+      50% { box-shadow: 0 0 10px #22c55e; }
+    }
+
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    .lbl-sm { font-size: 10px; color: #7a8ca8; }
+    .val-green { color: #22c55e; font-weight: 700; font-size: 13px; }
+    .val-red { color: #ff4444; font-weight: 700; font-size: 13px; }
+
+    .user-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+
+    .user-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #1e3a6e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      color: #4a9eff;
+    }
+
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid #1a2640;
+      background: #0b0f1e;
+      z-index: 2;
+    }
+
+    .topbar-title { color: #7a8ca8; font-size: 14px; }
+
+    .sys-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0d1225;
+      border: 1px solid #1a2640;
+      border-radius: 8px;
+      padding: 8px 14px;
+      transition: border-color 0.3s;
+    }
+
+    .sys-badge.alarm { border-color: #ff4444; }
+
+    .view-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .footer,
+    .page-footer {
+      padding: 9px 18px;
+      border-top: 1px solid #1a2640;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #7a8ca8;
+    }
+
+    .page-footer { font-size: 10px; padding: 7px 16px; }
+    .footer-update { display: flex; align-items: center; gap: 6px; }
+
+    .card {
+      background: #0d1225;
+      border: 1px solid #1a2640;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .card-title,
+    .sec-title,
+    .detail-title {
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #e0e6f0;
+      margin-bottom: 10px;
+    }
+
+    #viewOverview .power-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+    #viewOverview .power-item { padding: 0 18px; border-right: 1px solid #1a2640; }
+    #viewOverview .power-item:first-child { padding-left: 0; }
+    #viewOverview .power-item:last-child { border-right: none; }
+    #viewOverview .power-label { font-size: 11px; color: #7a8ca8; margin-bottom: 5px; }
+    #viewOverview .power-value { font-size: 24px; font-weight: 700; color: #e0e6f0; transition: color 0.3s; }
+    #viewOverview .power-value.green { color: #22c55e; }
+    #viewOverview .within-limit { display: flex; align-items: center; gap: 5px; color: #22c55e; font-size: 11px; margin-top: 5px; }
+    #viewOverview .hts-header { text-align: center; font-size: 10px; letter-spacing: 2px; color: #7a8ca8; margin-bottom: 8px; }
+    #viewOverview .cable-row { display: flex; align-items: center; width: 100%; }
+    #viewOverview .node { display: flex; flex-direction: column; align-items: center; }
+    #viewOverview .node-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #7a8ca8; margin-bottom: 5px; text-align: center; white-space: nowrap; }
+    #viewOverview .node-box {
+      width: 50px;
+      height: 50px;
+      background: #0f1830;
+      border: 1px solid #2a3f5e;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #viewOverview .node-box svg { width: 28px; height: 28px; }
+    #viewOverview .cable-seg { flex: 1; height: 8px; position: relative; display: flex; align-items: center; min-width: 20px; }
+    #viewOverview .cable-seg::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 0; right: 0;
+      height: 6px;
+      transform: translateY(-50%);
+      background: #1b2d4a;
+      border-top: 1px solid #2a3f5e;
+      border-bottom: 1px solid #2a3f5e;
+    }
+    #viewOverview .cable-seg::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 0; right: 0;
+      height: 2px;
+      transform: translateY(-50%);
+      background: repeating-linear-gradient(90deg, transparent 0px, transparent 4px, #4a9eff 4px, #4a9eff 8px);
+      background-size: 12px 2px;
+      animation: flowOverview 0.6s linear infinite;
+    }
+    @keyframes flowOverview { from { background-position: 0 0; } to { background-position: 12px 0; } }
+    #viewOverview .unit-cards { display: flex; justify-content: space-around; margin-top: 18px; }
+    #viewOverview .unit-card { background: #0f1830; border: 1px solid #1a2640; border-radius: 6px; padding: 10px 14px; min-width: 130px; }
+    #viewOverview .uc-title { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #c8d4e8; margin-bottom: 8px; }
+    #viewOverview .uc-label { font-size: 10px; color: #7a8ca8; }
+    #viewOverview .uc-value { font-size: 17px; font-weight: 700; color: #e0e6f0; margin-bottom: 6px; transition: color 0.3s; }
+    #viewOverview .uc-value.blue { color: #4a9eff; }
+    #viewOverview .bottom-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    #viewOverview .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    #viewOverview .chart-title { font-weight: 700; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #e0e6f0; display: flex; align-items: center; gap: 7px; }
+    #viewOverview .time-sel { font-size: 11px; color: #7a8ca8; }
+    #viewOverview .chart-legend { display: flex; gap: 10px; margin-top: 6px; justify-content: center; flex-wrap: wrap; }
+    #viewOverview .leg-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #7a8ca8; }
+    #viewOverview .leg-line { width: 18px; height: 2px; border-radius: 1px; }
+    #viewOverview canvas { width: 100% !important; height: 130px !important; }
+    #viewOverview .alarm-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    #viewOverview .view-all { color: #4a9eff; font-size: 11px; cursor: pointer; }
+    #viewOverview .alarm-body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 0 10px; }
+    #viewOverview .alarm-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #22c55e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 10px;
+      box-shadow: 0 0 20px #22c55e44;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    #viewOverview .alarm-icon.alert { background: #ff4444; box-shadow: 0 0 20px #ff444444; }
+    #viewOverview .alarm-title { font-weight: 700; font-size: 14px; color: #e0e6f0; }
+    #viewOverview .alarm-sub { font-size: 11px; color: #7a8ca8; margin-top: 3px; text-align: center; }
+    #viewOverview .alarm-link { color: #4a9eff; font-size: 11px; margin-top: 10px; cursor: pointer; display: none; }
+
+    #viewAlarms .page-hdr { padding: 13px 18px 11px; border-bottom: 1px solid #1a2640; }
+    #viewAlarms .page-title { font-size: 17px; font-weight: 700; color: #e0e6f0; letter-spacing: 1px; }
+    #viewAlarms .summary-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.65fr 1.3fr; gap: 10px; align-items: stretch; }
+    #viewAlarms .ac { border-radius: 8px; padding: 12px 14px; border: 1px solid; }
+    #viewAlarms .ac.crit { background:#1a0808; border-color:#ff4444; }
+    #viewAlarms .ac.high { background:#1a0e00; border-color:#f97316; }
+    #viewAlarms .ac.med { background:#1a1600; border-color:#eab308; }
+    #viewAlarms .ac.low { background:#0f1225; border-color:#2a3f5e; }
+    #viewAlarms .ac.total { background:#0f1225; border-color:#2a3f5e; display:flex; flex-direction:column; justify-content:center; }
+    #viewAlarms .ac.donut { background:#0d1225; border-color:#1a2640; padding:12px; }
+    #viewAlarms .ac-top { display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+    #viewAlarms .ac-icon { font-size:17px; }
+    #viewAlarms .ac-num { font-size:22px; font-weight:700; }
+    #viewAlarms .crit .ac-num { color:#ff4444; }
+    #viewAlarms .high .ac-num { color:#f97316; }
+    #viewAlarms .med .ac-num { color:#eab308; }
+    #viewAlarms .low .ac-num { color:#94a3b8; }
+    #viewAlarms .total .ac-num { color:#e0e6f0; font-size:28px; }
+    #viewAlarms .ac-label { font-weight:700; font-size:11px; letter-spacing:1px; }
+    #viewAlarms .crit .ac-label { color:#ff4444; }
+    #viewAlarms .high .ac-label { color:#f97316; }
+    #viewAlarms .med .ac-label { color:#eab308; }
+    #viewAlarms .low .ac-label { color:#94a3b8; }
+    #viewAlarms .ac-sub { font-size:10px; color:#7a8ca8; margin-top:3px; }
+    #viewAlarms .total-lbl { font-size:10px; color:#7a8ca8; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+    #viewAlarms .donut-title { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#7a8ca8; margin-bottom:8px; }
+    #viewAlarms .donut-inner { display:flex; gap:10px; align-items:center; }
+    #viewAlarms .donut-wrap { width:74px; height:74px; flex-shrink:0; }
+    #viewAlarms .dl { display:flex; flex-direction:column; gap:3px; flex:1; }
+    #viewAlarms .dl-row { display:flex; align-items:center; gap:5px; font-size:10px; color:#7a8ca8; }
+    #viewAlarms .dl-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+    #viewAlarms .donut-total { font-size:10px; color:#7a8ca8; margin-top:6px; padding-top:5px; border-top:1px solid #1a2640; }
+    #viewAlarms .cable-row { display:flex; align-items:center; width:100%; }
+    #viewAlarms .end-node { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:64px; }
+    #viewAlarms .en-lbl { font-size:9px; color:#94a3b8; }
+    #viewAlarms .en-icon { font-size:22px; }
+    #viewAlarms .en-meta { font-size:9px; color:#7a8ca8; }
+    #viewAlarms .en-val { font-size:11px; font-weight:700; color:#22c55e; }
+    #viewAlarms .seg { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; min-width:24px; }
+    #viewAlarms .seg-line { width:100%; height:4px; background:#1e2d4a; position:relative; }
+    #viewAlarms .seg-line::before {
+      content:'';
+      position:absolute; top:50%; left:0; right:0; height:2px;
+      transform:translateY(-50%);
+      background: repeating-linear-gradient(90deg, #4a9eff 0 5px, transparent 5px 10px);
+      animation: flowAlarms 0.8s linear infinite;
+    }
+    @keyframes flowAlarms { from { background-position: 0 0; } to { background-position: 10px 0; } }
+    #viewAlarms .seg-dist { font-size:9px; color:#7a8ca8; }
+    #viewAlarms .cu-node { display:flex; flex-direction:column; align-items:center; }
+    #viewAlarms .cu-box { border:2px solid; border-radius:6px; padding:6px 10px; text-align:center; min-width:96px; background:#0f1830; }
+    #viewAlarms .cu-box.bc-crit { border-color:#ff4444; }
+    #viewAlarms .cu-box.bc-high { border-color:#f97316; }
+    #viewAlarms .cu-box.bc-ok { border-color:#22c55e; }
+    #viewAlarms .cu-hdr { display:flex; align-items:center; justify-content:center; gap:5px; margin-bottom:3px; }
+    #viewAlarms .cu-name { font-size:11px; font-weight:700; color:#e0e6f0; }
+    #viewAlarms .cu-sicon { font-size:13px; }
+    #viewAlarms .cu-icon { font-size:20px; margin-bottom:3px; }
+    #viewAlarms .cu-m { font-size:10px; display:flex; align-items:center; gap:3px; line-height:1.6; }
+    #viewAlarms .cu-mv { font-weight:700; font-size:11px; }
+    #viewAlarms .cu-mv.cr { color:#ff4444; }
+    #viewAlarms .cu-mv.or { color:#f97316; }
+    #viewAlarms .cu-mv.gn { color:#22c55e; }
+    #viewAlarms .ruler { display:flex; justify-content:space-between; margin-top:8px; padding-top:5px; border-top:1px solid #1a2640; font-size:9px; color:#7a8ca8; }
+    #viewAlarms .filter-bar { display:flex; align-items:center; gap:8px; background:#0d1225; border:1px solid #1a2640; border-radius:8px; padding:9px 12px; }
+    #viewAlarms .search-wrap { display:flex; align-items:center; gap:5px; background:#0b0f1e; border:1px solid #1a2640; border-radius:6px; padding:5px 8px; flex:0 0 170px; }
+    #viewAlarms .search-wrap input { background:transparent; border:none; outline:none; color:#c8d4e8; font-size:12px; width:100%; }
+    #viewAlarms .search-wrap input::placeholder { color:#7a8ca8; }
+    #viewAlarms select {
+      background:#0b0f1e; border:1px solid #1a2640; border-radius:6px; color:#c8d4e8;
+      padding:5px 24px 5px 8px; font-size:12px; cursor:pointer; appearance:none; -webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a8ca8'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 7px center;
+    }
+    #viewAlarms .filter-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+    #viewAlarms .show-ack { display:flex; align-items:center; gap:5px; font-size:12px; color:#7a8ca8; cursor:pointer; }
+    #viewAlarms .show-ack input { accent-color:#4a9eff; }
+    #viewAlarms .btn-export { display:flex; align-items:center; gap:5px; background:transparent; border:1px solid #2a3f5e; border-radius:6px; color:#4a9eff; padding:5px 11px; font-size:12px; cursor:pointer; }
+    #viewAlarms .btn-export:hover { background:#1a2640; }
+    #viewAlarms .bottom-split { display:grid; grid-template-columns:1fr 270px; gap:10px; }
+    #viewAlarms .table-card { background:#0d1225; border:1px solid #1a2640; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
+    #viewAlarms .table-hdr { padding:10px 12px; border-bottom:1px solid #1a2640; font-size:12px; font-weight:700; color:#e0e6f0; }
+    #viewAlarms .table-scroll { overflow-x:auto; flex:1; }
+    #viewAlarms table.at { width:100%; border-collapse:collapse; font-size:11px; }
+    #viewAlarms table.at th { padding:7px 9px; text-align:left; color:#7a8ca8; font-size:10px; font-weight:600; letter-spacing:0.4px; text-transform:uppercase; border-bottom:1px solid #1a2640; white-space:nowrap; }
+    #viewAlarms table.at td { padding:7px 9px; border-bottom:1px solid #0f1830; vertical-align:middle; white-space:nowrap; }
+    #viewAlarms table.at tbody tr:hover td { background:#0f1830; cursor:pointer; }
+    #viewAlarms table.at tbody tr.sel td { background:#1a2640; }
+    #viewAlarms .sev-badge { padding:2px 7px; border-radius:4px; font-size:10px; font-weight:700; display:inline-block; }
+    #viewAlarms .sev-badge.critical { background:#ff444420; color:#ff4444; border:1px solid #ff444450; }
+    #viewAlarms .sev-badge.high { background:#f9731620; color:#f97316; border:1px solid #f9731650; }
+    #viewAlarms .sev-badge.medium { background:#eab30820; color:#eab308; border:1px solid #eab30850; }
+    #viewAlarms .sev-badge.low { background:#3a4f6e20; color:#94a3b8; border:1px solid #3a4f6e60; }
+    #viewAlarms .stat-badge { padding:2px 7px; border-radius:4px; font-size:10px; font-weight:700; background:#ff444420; color:#ff4444; border:1px solid #ff444450; }
+    #viewAlarms .vc { font-weight:700; }
+    #viewAlarms .vc.cr { color:#ff4444; }
+    #viewAlarms .vc.or { color:#f97316; }
+    #viewAlarms .vc.yw { color:#eab308; }
+    #viewAlarms .act-btn { background:transparent; border:none; color:#7a8ca8; cursor:pointer; padding:2px 5px; border-radius:4px; font-size:13px; }
+    #viewAlarms .act-btn:hover { color:#4a9eff; background:#1a2640; }
+    #viewAlarms .tbl-foot { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-top:1px solid #1a2640; font-size:11px; color:#7a8ca8; }
+    #viewAlarms .pagi { display:flex; align-items:center; gap:3px; }
+    #viewAlarms .pg-btn { background:transparent; border:1px solid #1a2640; color:#7a8ca8; padding:3px 8px; border-radius:4px; cursor:pointer; font-size:11px; }
+    #viewAlarms .pg-btn.active { background:#1e3a6e; color:#4a9eff; border-color:#4a9eff; }
+    #viewAlarms .pg-btn:hover:not(.active) { background:#1a2640; color:#c8d4e8; }
+    #viewAlarms .detail-card { background:#0d1225; border:1px solid #1a2640; border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:0; }
+    #viewAlarms .d-row { display:flex; justify-content:space-between; align-items:flex-start; padding:5px 0; border-bottom:1px solid #0f1830; font-size:11px; }
+    #viewAlarms .d-row:last-of-type { border-bottom:none; }
+    #viewAlarms .d-key { color:#7a8ca8; flex-shrink:0; padding-right:8px; }
+    #viewAlarms .d-val { color:#e0e6f0; font-weight:600; text-align:right; max-width:140px; word-break:break-word; }
+    #viewAlarms .btn-vud { width:100%; margin-top:10px; background:#1e3a6e; color:#4a9eff; border:none; border-radius:6px; padding:10px; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:0.4px; }
+    #viewAlarms .btn-vud:hover { background:#2a4f8e; }
+
+    @keyframes flash { 0%,100% { opacity: 1; } 40% { opacity: 0.3; } }
+    .flash { animation: flash 0.4s ease; }
+    #viewAlarms .new-alarm td { animation: newRow 2.5s ease forwards; }
+    @keyframes newRow { from { background:#ff444420; } to { background:transparent; } }
+
+    #toast {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 420px;
+      background: #2a0a0a;
+      border: 1px solid #ff4444;
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+      transform: translateX(calc(100% + 36px));
+      opacity: 0;
+      transition: transform 0.35s ease, opacity 0.35s ease;
+      z-index: 5;
+    }
+
+    #toast.show { transform: translateX(0); opacity: 1; }
+    #toast .toast-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    #toast .toast-title { color: #ff9a9a; font-weight: 700; font-size: 13px; }
+    #toast .toast-body { color: #ffd6d6; font-size: 12px; margin-top: 6px; line-height: 1.45; }
+    #toast .toast-link { color: #ffb4b4; font-weight: 700; cursor: pointer; display: inline-block; margin-top: 8px; }
+    #toast .toast-close { background: transparent; border: none; color: #ffb4b4; cursor: pointer; font-size: 18px; line-height: 1; }
+  </style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo"><div class="logo-box">NKT</div></div>
+  <nav>
+    <div id="navOverview" class="nav-item active" onclick="switchView('overview')"><span class="nav-icon">⊞</span> Overview</div>
+    <div class="nav-item"><span class="nav-icon">⚙</span> System</div>
+    <div class="nav-item"><span class="nav-icon">◎</span> Cooling Units</div>
+    <div class="nav-item"><span class="nav-icon">↗</span> Trends</div>
+    <div id="navAlarms" class="nav-item" onclick="switchView('alarms')"><span class="nav-icon">🔔</span> Alarms <span id="alarmBadge" class="nav-badge"><span id="navBadge">2</span></span></div>
+    <div class="nav-item"><span class="nav-icon">📋</span> Reports</div>
+    <div class="nav-item"><span class="nav-icon">📅</span> Events</div>
+    <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
+    <div class="nav-item"><span class="nav-icon">👥</span> Users</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="status-box">
+      <div class="status-row">
+        <div id="sidebarDot" class="dot"></div>
+        <span class="lbl-sm">System Status</span>
+      </div>
+      <div id="sidebarStatusText" class="val-green">NORMAL</div>
+      <div id="sidebarStatusSub" class="lbl-sm" style="margin-top:3px">All systems normal</div>
+    </div>
+    <div class="user-row">
+      <div class="user-avatar">👤</div>
+      <div>
+        <div style="font-weight:700;font-size:12px">operator</div>
+        <div class="lbl-sm">Operator</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <span class="topbar-title">NKT Cooling System Platform</span>
+    <div id="topbarBadge" class="sys-badge">
+      <div id="bigDot" class="big-dot"></div>
+      <div>
+        <div class="lbl-sm">System Status</div>
+        <div id="topbarStatus" class="val-green" style="font-size:14px">NORMAL</div>
+      </div>
+    </div>
+  </header>
+
+  <div id="toast">
+    <div class="toast-head">
+      <div class="toast-title">🔔 CRITICAL ALARM</div>
+      <button class="toast-close" onclick="dismissToast()">×</button>
+    </div>
+    <div class="toast-body">CU-1: Temperature above critical threshold (77.3 K &gt; 82.0 K threshold)</div>
+    <div class="toast-link" onclick="switchView('alarms'); dismissToast();">View Alarms →</div>
+  </div>
+
+  <div id="viewOverview" class="view-pane">
+    <div class="content">
+      <div class="card">
+        <div class="card-title">Power Overview</div>
+        <div class="power-grid">
+          <div class="power-item"><div class="power-label">Input Power</div><div class="power-value" id="inputPower">301.2 MW</div></div>
+          <div class="power-item"><div class="power-label">Output Power</div><div class="power-value" id="outputPower">300.7 MW</div></div>
+          <div class="power-item"><div class="power-label">Power Difference</div><div class="power-value" id="powerDiff">0.5 MW</div></div>
+          <div class="power-item"><div class="power-label">Difference (%)</div><div class="power-value green" id="powerPct">0.17%</div><div class="within-limit">✅ Within 1% limit</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">System Overview</div>
+        <div class="hts-header">HTS CABLE</div>
+        <div class="cable-row">
+          <div class="node"><div class="node-label">Substation</div><div class="node-box"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="10" width="20" height="14" rx="2" stroke="#4a9eff" stroke-width="1.4"/><path d="M8 10V7M14 10V5M20 10V7" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round"/><rect x="11" y="17" width="6" height="7" rx="1" fill="#1e3a6e"/><circle cx="14" cy="14" r="2" fill="#4a9eff"/></svg></div></div>
+          <div class="cable-seg"></div>
+          <div class="node"><div class="node-label">Cooling Unit 1</div><div class="node-box"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="10" stroke="#4a9eff" stroke-width="1.4"/><circle cx="14" cy="14" r="4" stroke="#4a9eff" stroke-width="1.2"/><path d="M14 4L14 10M14 18L14 24M4 14L10 14M18 14L24 14" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round"/><path d="M7 7L11 11M17 17L21 21M21 7L17 11M11 17L7 21" stroke="#4a9eff" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/></svg></div></div>
+          <div class="cable-seg"></div>
+          <div class="node"><div class="node-label">Cooling Unit 2</div><div class="node-box"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="10" stroke="#4a9eff" stroke-width="1.4"/><circle cx="14" cy="14" r="4" stroke="#4a9eff" stroke-width="1.2"/><path d="M14 4L14 10M14 18L14 24M4 14L10 14M18 14L24 14" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round"/><path d="M7 7L11 11M17 17L21 21M21 7L17 11M11 17L7 21" stroke="#4a9eff" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/></svg></div></div>
+          <div class="cable-seg"></div>
+          <div class="node"><div class="node-label">Cooling Unit 3</div><div class="node-box"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="10" stroke="#4a9eff" stroke-width="1.4"/><circle cx="14" cy="14" r="4" stroke="#4a9eff" stroke-width="1.2"/><path d="M14 4L14 10M14 18L14 24M4 14L10 14M18 14L24 14" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round"/><path d="M7 7L11 11M17 17L21 21M21 7L17 11M11 17L7 21" stroke="#4a9eff" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/></svg></div></div>
+          <div class="cable-seg"></div>
+          <div class="node"><div class="node-label">Cooling Unit 4</div><div class="node-box"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="10" stroke="#4a9eff" stroke-width="1.4"/><circle cx="14" cy="14" r="4" stroke="#4a9eff" stroke-width="1.2"/><path d="M14 4L14 10M14 18L14 24M4 14L10 14M18 14L24 14" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round"/><path d="M7 7L11 11M17 17L21 21M21 7L17 11M11 17L7 21" stroke="#4a9eff" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/></svg></div></div>
+          <div class="cable-seg"></div>
+          <div class="node"><div class="node-label">Substation</div><div class="node-box"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="10" width="20" height="14" rx="2" stroke="#4a9eff" stroke-width="1.4"/><path d="M8 10V7M14 10V5M20 10V7" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round"/><rect x="11" y="17" width="6" height="7" rx="1" fill="#1e3a6e"/><circle cx="14" cy="14" r="2" fill="#4a9eff"/></svg></div></div>
+          <div class="cable-seg"></div>
+          <div class="node"><div class="node-label">Grid</div><div class="node-box"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 2L14 8M14 20L14 26" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round"/><path d="M6 10L14 8L22 10" stroke="#4a9eff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 14L14 12L20 14" stroke="#4a9eff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 18L14 16L18 18" stroke="#4a9eff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        </div>
+
+        <div class="unit-cards">
+          <div class="unit-card"><div class="uc-title">UNIT 1</div><div class="uc-label">Temperature</div><div class="uc-value" id="temp1">77.3 K</div><div class="uc-label">Pressure</div><div class="uc-value blue" id="pres1">20.0 atm</div></div>
+          <div class="unit-card"><div class="uc-title">UNIT 2</div><div class="uc-label">Temperature</div><div class="uc-value" id="temp2">76.7 K</div><div class="uc-label">Pressure</div><div class="uc-value blue" id="pres2">20.1 atm</div></div>
+          <div class="unit-card"><div class="uc-title">UNIT 3</div><div class="uc-label">Temperature</div><div class="uc-value" id="temp3">77.1 K</div><div class="uc-label">Pressure</div><div class="uc-value blue" id="pres3">19.8 atm</div></div>
+          <div class="unit-card"><div class="uc-title">UNIT 4</div><div class="uc-label">Temperature</div><div class="uc-value" id="temp4">78.3 K</div><div class="uc-label">Pressure</div><div class="uc-value blue" id="pres4">20.1 atm</div></div>
+        </div>
+      </div>
+
+      <div class="bottom-row">
+        <div class="card">
+          <div class="chart-header"><div class="chart-title">🌡 Temperature Trends</div><div class="time-sel">Last 15 min ▾</div></div>
+          <canvas id="tempChart"></canvas>
+          <div class="chart-legend">
+            <div class="leg-item"><div class="leg-line" style="background:#4a9eff"></div>Unit 1</div>
+            <div class="leg-item"><div class="leg-line" style="background:#22c55e"></div>Unit 2</div>
+            <div class="leg-item"><div class="leg-line" style="background:#f59e0b"></div>Unit 3</div>
+            <div class="leg-item"><div class="leg-line" style="background:#a855f7"></div>Unit 4</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chart-header"><div class="chart-title">📊 Pressure Trends</div><div class="time-sel">Last 15 min ▾</div></div>
+          <canvas id="presChart"></canvas>
+          <div class="chart-legend">
+            <div class="leg-item"><div class="leg-line" style="background:#4a9eff"></div>Unit 1</div>
+            <div class="leg-item"><div class="leg-line" style="background:#22c55e"></div>Unit 2</div>
+            <div class="leg-item"><div class="leg-line" style="background:#f59e0b"></div>Unit 3</div>
+            <div class="leg-item"><div class="leg-line" style="background:#a855f7"></div>Unit 4</div>
+          </div>
+        </div>
+
+        <div id="overviewAlarmCard" class="card" style="display:flex;flex-direction:column;">
+          <div class="alarm-header"><div class="chart-title">🔔 Alarms</div><div id="overviewAlarmViewAll" class="view-all" onclick="switchView('alarms')">View all</div></div>
+          <div class="alarm-body">
+            <div id="overviewAlarmIcon" class="alarm-icon">✓</div>
+            <div id="overviewAlarmTitle" class="alarm-title">No active alarms</div>
+            <div id="overviewAlarmSub" class="alarm-sub">All systems normal</div>
+            <div id="overviewAlarmBodyLink" class="alarm-link" onclick="switchView('alarms')">View all →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-update">↻ Data updated: <span id="lastUpdate">—</span></div>
+      <div>All values are live unless otherwise stated</div>
+      <div>🌐 Timezone: UTC+2</div>
+    </footer>
+  </div>
+
+  <div id="viewAlarms" class="view-pane" style="display:none">
+    <div class="page-hdr"><div class="page-title">ALARMS</div></div>
+    <div class="content">
+      <div class="summary-row">
+        <div class="ac crit"><div class="ac-top"><span class="ac-icon" style="color:#ff4444">🔔</span><span class="ac-num" id="cCrit">2</span></div><div class="ac-label">CRITICAL</div><div class="ac-sub" id="sCrit">Affects 2 Units</div></div>
+        <div class="ac high"><div class="ac-top"><span class="ac-icon" style="color:#f97316">🔔</span><span class="ac-num" id="cHigh">3</span></div><div class="ac-label">HIGH</div><div class="ac-sub" id="sHigh">Affects 2 Units</div></div>
+        <div class="ac med"><div class="ac-top"><span class="ac-icon" style="color:#eab308">🔔</span><span class="ac-num" id="cMed">4</span></div><div class="ac-label">MEDIUM</div><div class="ac-sub" id="sMed">Affects 3 Units</div></div>
+        <div class="ac low"><div class="ac-top"><span class="ac-icon" style="color:#94a3b8">🔔</span><span class="ac-num" id="cLow">12</span></div><div class="ac-label" style="color:#94a3b8">LOW</div><div class="ac-sub" id="sLow">Affects 4 Units</div></div>
+        <div class="ac total"><div class="total-lbl">Total Active</div><div class="ac-num" id="cTotal">21</div></div>
+        <div class="ac donut">
+          <div class="donut-title">Alarm Summary</div>
+          <div class="donut-inner">
+            <div class="donut-wrap"><canvas id="donutChart" width="74" height="74"></canvas></div>
+            <div class="dl">
+              <div class="dl-row"><div class="dl-dot" style="background:#ff4444"></div><span id="dlCrit">Critical  2 (10%)</span></div>
+              <div class="dl-row"><div class="dl-dot" style="background:#f97316"></div><span id="dlHigh">High      3 (14%)</span></div>
+              <div class="dl-row"><div class="dl-dot" style="background:#eab308"></div><span id="dlMed">Medium 4 (19%)</span></div>
+              <div class="dl-row"><div class="dl-dot" style="background:#3b82f6"></div><span id="dlLow">Low      12 (57%)</span></div>
+              <div class="donut-total">Total <strong id="dlTotal">21</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">System Overview</div>
+        <div class="cable-row">
+          <div class="end-node"><div class="en-lbl">Substation</div><div class="en-icon">🏭</div><div class="en-meta">Voltage</div><div class="en-val" id="voltL">245.7 kV</div></div>
+          <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+          <div class="cu-node"><div class="cu-box bc-crit" id="cu1box"><div class="cu-hdr"><span class="cu-name">CU-1</span><span class="cu-sicon" id="cu1si">❗</span></div><div class="cu-icon">❄</div><div class="cu-m">🌡 <span class="cu-mv cr" id="cu1t">77.3 K</span></div><div class="cu-m">⊙ <span class="cu-mv cr" id="cu1p">20.0 atm</span></div></div></div>
+          <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+          <div class="cu-node"><div class="cu-box bc-high" id="cu2box"><div class="cu-hdr"><span class="cu-name">CU-2</span><span class="cu-sicon" id="cu2si">❗</span></div><div class="cu-icon">❄</div><div class="cu-m">🌡 <span class="cu-mv or" id="cu2t">76.7 K</span></div><div class="cu-m">⊙ <span class="cu-mv or" id="cu2p">19.9 atm</span></div></div></div>
+          <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+          <div class="cu-node"><div class="cu-box bc-ok" id="cu3box"><div class="cu-hdr"><span class="cu-name">CU-3</span><span class="cu-sicon" id="cu3si">✅</span></div><div class="cu-icon">❄</div><div class="cu-m">🌡 <span class="cu-mv gn" id="cu3t">77.1 K</span></div><div class="cu-m">⊙ <span class="cu-mv gn" id="cu3p">19.8 atm</span></div></div></div>
+          <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+          <div class="cu-node"><div class="cu-box bc-high" id="cu4box"><div class="cu-hdr"><span class="cu-name">CU-4</span><span class="cu-sicon" id="cu4si">❗</span></div><div class="cu-icon">❄</div><div class="cu-m">🌡 <span class="cu-mv or" id="cu4t">78.3 K</span></div><div class="cu-m">⊙ <span class="cu-mv or" id="cu4p">20.1 atm</span></div></div></div>
+          <div class="seg"><div class="seg-line"></div><div class="seg-dist">25 km</div></div>
+          <div class="end-node"><div class="en-lbl">Grid</div><div class="en-icon">⚡</div><div class="en-meta">Voltage</div><div class="en-val" id="voltR">246.1 kV</div></div>
+        </div>
+        <div class="ruler"><span>0 km</span><span>25 km</span><span>50 km</span><span>75 km</span><span>100 km</span><span>125 km</span></div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-wrap"><span style="color:#7a8ca8;font-size:12px">🔍</span><input type="text" id="srch" placeholder="Search alarms..." /></div>
+        <select id="sevF"><option value="">All Severity</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select>
+        <select id="unitF"><option value="">All Units</option><option>CU-1</option><option>CU-2</option><option>CU-3</option><option>CU-4</option></select>
+        <select id="statF"><option value="">All Status</option><option>ACTIVE</option></select>
+        <div class="filter-right"><label class="show-ack"><input type="checkbox" /> Show Acknowledged</label><button class="btn-export">↑ EXPORT</button></div>
+      </div>
+
+      <div class="bottom-split">
+        <div class="table-card">
+          <div class="table-hdr" id="tblHdr">ACTIVE ALARMS (21)</div>
+          <div class="table-scroll">
+            <table class="at">
+              <thead><tr><th>Time</th><th>Severity</th><th>Unit</th><th>Parameter</th><th>Message</th><th>Value</th><th>Threshold</th><th>Status</th><th>Duration</th><th>Actions</th></tr></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div class="tbl-foot"><span>Rows per page: <b>10</b></span><span id="rowRange">1–10 of 21</span><div class="pagi"><button class="pg-btn">«</button><button class="pg-btn">‹</button><button class="pg-btn active" id="p1">1</button><button class="pg-btn" id="p2">2</button><button class="pg-btn" id="p3">3</button><button class="pg-btn">›</button><button class="pg-btn">»</button></div></div>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-title">Alarm Details</div>
+          <div id="detailBody"></div>
+          <button class="btn-vud">VIEW UNIT DETAILS</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer"><span>NKT Cooling System Platform</span><span>© 2024 NKT A/S</span></footer>
+  </div>
+</div>
+
+<script>
+  let alarmsViewInited = false;
+  let toastDismissTimer = null;
+  let alarmTriggered = false;
+  let alarmsDonut = null;
+
+  function switchView(view) {
+    document.getElementById('viewOverview').style.display = view === 'overview' ? 'flex' : 'none';
+    document.getElementById('viewAlarms').style.display   = view === 'alarms'   ? 'flex' : 'none';
+    document.getElementById('navOverview').className = 'nav-item' + (view === 'overview' ? ' active' : '');
+    document.getElementById('navAlarms').className   = 'nav-item' + (view === 'alarms'   ? ' alarm-nav-active' : '');
+    if (view === 'alarms' && !alarmsViewInited) { initAlarmsDonut(); alarmsViewInited = true; }
+  }
+
+  function dismissToast() {
+    document.getElementById('toast').classList.remove('show');
+    if (toastDismissTimer) {
+      clearTimeout(toastDismissTimer);
+      toastDismissTimer = null;
+    }
+  }
+
+  function showToast() {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    if (toastDismissTimer) clearTimeout(toastDismissTimer);
+    toastDismissTimer = setTimeout(dismissToast, 8000);
+  }
+
+  function triggerAlarmState() {
+    if (alarmTriggered) return;
+    alarmTriggered = true;
+    document.getElementById('bigDot').classList.add('alarm');
+    document.getElementById('sidebarDot').classList.add('alarm');
+    document.getElementById('topbarBadge').classList.add('alarm');
+    const topStatus = document.getElementById('topbarStatus');
+    topStatus.textContent = 'ALARM';
+    topStatus.className = 'val-red';
+    topStatus.style.fontSize = '14px';
+    const sideStatus = document.getElementById('sidebarStatusText');
+    sideStatus.textContent = 'ALARM';
+    sideStatus.className = 'val-red';
+    document.getElementById('sidebarStatusSub').textContent = 'Active alarms detected';
+    document.getElementById('alarmBadge').classList.add('visible');
+    document.getElementById('navBadge').textContent = '2';
+    document.getElementById('overviewAlarmIcon').classList.add('alert');
+    document.getElementById('overviewAlarmIcon').textContent = '🔔';
+    document.getElementById('overviewAlarmTitle').textContent = '2 Active Alarms';
+    document.getElementById('overviewAlarmSub').textContent = 'CU-1 Temp, CU-4 Pressure';
+    document.getElementById('overviewAlarmBodyLink').style.display = 'inline-block';
+    showToast();
+  }
+
+  const overviewState = { inputPower: 301.2, outputPower: 300.7, temps: [77.3, 76.7, 77.1, 78.3], pressures: [20.0, 20.1, 19.8, 20.1] };
+  function rwOverview(val, min, max, step) { return Math.min(max, Math.max(min, +(val + (Math.random() - 0.5) * step * 2).toFixed(2))); }
+  function nowHMS() { return new Date().toTimeString().slice(0, 8); }
+  function nowHM() { return new Date().toTimeString().slice(0, 5); }
+  function flashEl(el) { if (!el) return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  const COLORS = ['#4a9eff', '#22c55e', '#f59e0b', '#a855f7'];
+  const N = 90;
+  function buildHistory(base, spread) { return Array.from({ length: N }, () => +(base + (Math.random() - 0.5) * spread).toFixed(2)); }
+  function buildLabels() { const labels = []; for (let i = N - 1; i >= 0; i--) { const t = new Date(Date.now() - i * 10000); labels.push(t.toTimeString().slice(0, 5)); } return labels; }
+
+  const commonOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: '#0f1830', borderColor: '#1a2640', borderWidth: 1, titleColor: '#7a8ca8', bodyColor: '#c8d4e8' } },
+    scales: {
+      x: { ticks: { color: '#7a8ca8', font: { size: 9 }, maxTicksLimit: 6 }, grid: { color: '#1a2640' }, border: { color: '#1a2640' } },
+      y: { ticks: { color: '#7a8ca8', font: { size: 9 } }, grid: { color: '#1a2640' }, border: { color: '#1a2640' } },
+    },
+  };
+
+  const tempChart = new Chart(document.getElementById('tempChart'), {
+    type: 'line',
+    data: { labels: buildLabels(), datasets: [77.3, 76.7, 77.1, 78.3].map((base, i) => ({ label: `Unit ${i + 1}`, data: buildHistory(base, 0.6), borderColor: COLORS[i], backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, tension: 0.4 })) },
+    options: { ...commonOpts, scales: { ...commonOpts.scales, y: { ...commonOpts.scales.y, min: 60, max: 90, title: { display: true, text: 'Temperature (K)', color: '#7a8ca8', font: { size: 9 } } } } },
+  });
+
+  const presChart = new Chart(document.getElementById('presChart'), {
+    type: 'line',
+    data: { labels: buildLabels(), datasets: [20.0, 20.1, 19.8, 20.1].map((base, i) => ({ label: `Unit ${i + 1}`, data: buildHistory(base, 0.4), borderColor: COLORS[i], backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, tension: 0.4 })) },
+    options: { ...commonOpts, scales: { ...commonOpts.scales, y: { ...commonOpts.scales.y, min: 10, max: 30, title: { display: true, text: 'Pressure (atm)', color: '#7a8ca8', font: { size: 9 } } } } },
+  });
+
+  function tickOverview() {
+    overviewState.inputPower = rwOverview(overviewState.inputPower, 298, 304, 0.25);
+    overviewState.outputPower = rwOverview(overviewState.outputPower, 297.5, 303.5, 0.25);
+    const diff = +(overviewState.inputPower - overviewState.outputPower).toFixed(2);
+    const pct = +((diff / overviewState.inputPower) * 100).toFixed(2);
+    const overviewEls = { inputPower: document.getElementById('inputPower'), outputPower: document.getElementById('outputPower'), powerDiff: document.getElementById('powerDiff'), powerPct: document.getElementById('powerPct') };
+    overviewEls.inputPower.textContent = overviewState.inputPower.toFixed(1) + ' MW';
+    overviewEls.outputPower.textContent = overviewState.outputPower.toFixed(1) + ' MW';
+    overviewEls.powerDiff.textContent = diff.toFixed(1) + ' MW';
+    overviewEls.powerPct.textContent = pct.toFixed(2) + '%';
+    Object.values(overviewEls).forEach(flashEl);
+    overviewState.temps = overviewState.temps.map(t => rwOverview(t, 74, 82, 0.12));
+    overviewState.pressures = overviewState.pressures.map(p => rwOverview(p, 18, 22, 0.08));
+    overviewState.temps.forEach((t, i) => { const el = document.getElementById('temp' + (i + 1)); el.textContent = t.toFixed(1) + ' K'; flashEl(el); });
+    overviewState.pressures.forEach((p, i) => { const el = document.getElementById('pres' + (i + 1)); el.textContent = p.toFixed(1) + ' atm'; flashEl(el); });
+    const label = nowHM();
+    [tempChart, presChart].forEach((chart, ci) => {
+      chart.data.labels.push(label);
+      chart.data.labels.shift();
+      const bases = ci === 0 ? overviewState.temps : overviewState.pressures;
+      const spread = ci === 0 ? 0.15 : 0.08;
+      chart.data.datasets.forEach((ds, i) => { ds.data.push(+(bases[i] + (Math.random() - 0.5) * spread).toFixed(2)); ds.data.shift(); });
+      chart.update('none');
+    });
+    document.getElementById('lastUpdate').textContent = nowHMS();
+  }
+
+  const alarmsRw = (v, lo, hi, step) => Math.min(hi, Math.max(lo, +(v + (Math.random() - 0.5) * step * 2).toFixed(2)));
+  const fmtHMS = d => d.toTimeString().slice(0, 8);
+  const fmtDur = start => { const s = Math.floor((Date.now() - start.getTime()) / 1000); return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map(n => String(n).padStart(2, '0')).join(':'); };
+  function ago(secs) { return new Date(Date.now() - secs * 1000); }
+
+  let alarms = [
+    { id:1,  time:ago(272), sev:'CRITICAL', unit:'CU-1', param:'Temperature', msg:'Temperature above critical threshold', v:77.3, uv:'K',    thr:'> 82.0 K' },
+    { id:2,  time:ago(318), sev:'CRITICAL', unit:'CU-4', param:'Pressure',    msg:'Pressure below critical threshold',    v:17.5, uv:'atm',  thr:'< 18.0 atm' },
+    { id:3,  time:ago(390), sev:'HIGH',     unit:'CU-1', param:'Flow',        msg:'Flow out of range',                    v:8.1,  uv:'kg/s', thr:'< 10.0 kg/s' },
+    { id:4,  time:ago(473), sev:'HIGH',     unit:'CU-2', param:'Temperature', msg:'Temperature above high threshold',     v:76.7, uv:'K',    thr:'> 78.0 K' },
+    { id:5,  time:ago(538), sev:'HIGH',     unit:'CU-3', param:'Pressure',    msg:'Pressure above alarm threshold',       v:20.9, uv:'atm',  thr:'> 20.7 atm' },
+    { id:6,  time:ago(556), sev:'MEDIUM',   unit:'CU-4', param:'Pump System', msg:'Pump running at reduced efficiency',   v:null, uv:'',     thr:null },
+    { id:7,  time:ago(590), sev:'MEDIUM',   unit:'CU-2', param:'Pressure',    msg:'Pressure above high threshold',        v:20.8, uv:'atm',  thr:'> 20.5 atm' },
+    { id:8,  time:ago(632), sev:'MEDIUM',   unit:'CU-1', param:'Vibration',   msg:'Vibration level elevated',             v:2.4,  uv:'mm/s', thr:'> 2.2 mm/s' },
+    { id:9,  time:ago(665), sev:'MEDIUM',   unit:'CU-3', param:'Pump System', msg:'Pump efficiency below nominal',        v:null, uv:'',     thr:null },
+    { id:10, time:ago(700), sev:'LOW',      unit:'CU-3', param:'Temperature', msg:'Temperature deviation high',           v:75.8, uv:'K',    thr:'> 75.0 K' },
+    { id:11, time:ago(740), sev:'LOW',      unit:'CU-3', param:'Pressure',    msg:'Pressure deviation high',              v:20.6, uv:'atm',  thr:'> 20.5 atm' },
+    { id:12, time:ago(780), sev:'LOW',      unit:'CU-2', param:'Flow',        msg:'Flow slightly below nominal',          v:9.8,  uv:'kg/s', thr:'< 10.0 kg/s' },
+    { id:13, time:ago(820), sev:'LOW',      unit:'CU-1', param:'Vibration',   msg:'Vibration above threshold',            v:2.1,  uv:'mm/s', thr:'> 2.0 mm/s' },
+    { id:14, time:ago(860), sev:'LOW',      unit:'CU-4', param:'Vibration',   msg:'Vibration above threshold',            v:2.3,  uv:'mm/s', thr:'> 2.0 mm/s' },
+    { id:15, time:ago(900), sev:'LOW',      unit:'CU-1', param:'Pressure',    msg:'Pressure slightly elevated',           v:20.7, uv:'atm',  thr:'> 20.5 atm' },
+    { id:16, time:ago(940), sev:'LOW',      unit:'CU-2', param:'Vibration',   msg:'Vibration above threshold',            v:2.0,  uv:'mm/s', thr:'> 2.0 mm/s' },
+    { id:17, time:ago(980), sev:'LOW',      unit:'CU-4', param:'Temperature', msg:'Temperature deviation detected',       v:76.2, uv:'K',    thr:'> 76.0 K' },
+    { id:18, time:ago(1020),sev:'LOW',      unit:'CU-1', param:'Flow',        msg:'Flow slightly below nominal',          v:9.5,  uv:'kg/s', thr:'< 10.0 kg/s' },
+    { id:19, time:ago(1060),sev:'LOW',      unit:'CU-3', param:'Pressure',    msg:'Pressure slightly elevated',           v:20.6, uv:'atm',  thr:'> 20.5 atm' },
+    { id:20, time:ago(1100),sev:'LOW',      unit:'CU-2', param:'Temperature', msg:'Temperature deviation detected',       v:75.9, uv:'K',    thr:'> 75.0 K' },
+    { id:21, time:ago(1140),sev:'LOW',      unit:'CU-4', param:'Flow',        msg:'Flow slightly below nominal',          v:9.6,  uv:'kg/s', thr:'< 10.0 kg/s' }
+  ];
+
+  let selId = 1;
+  let page = 1;
+  const PER = 10;
+
+  function getAlarmCounts() { const cnt = { CRITICAL:0, HIGH:0, MEDIUM:0, LOW:0 }; const unt = { CRITICAL:new Set(), HIGH:new Set(), MEDIUM:new Set(), LOW:new Set() }; alarms.forEach(a => { cnt[a.sev]++; unt[a.sev].add(a.unit); }); return { cnt, unt, tot: alarms.length }; }
+  function initAlarmsDonut() { if (alarmsDonut) return; const { cnt } = getAlarmCounts(); alarmsDonut = new Chart(document.getElementById('donutChart'), { type: 'doughnut', data: { datasets: [{ data:[cnt.CRITICAL, cnt.HIGH, cnt.MEDIUM, cnt.LOW], backgroundColor:['#ff4444','#f97316','#eab308','#3b82f6'], borderWidth:0 }] }, options: { responsive: false, cutout: '68%', plugins: { legend:{ display:false }, tooltip:{ enabled:false } }, animation: { duration:500 } } }); }
+  function filtered() { const q = document.getElementById('srch').value.toLowerCase(); const sv = document.getElementById('sevF').value; const un = document.getElementById('unitF').value; return alarms.filter(a => { if (sv && a.sev !== sv) return false; if (un && a.unit !== un) return false; if (q && ![a.msg, a.param, a.unit].some(s => s.toLowerCase().includes(q))) return false; return true; }); }
+  function vcls(sev) { return { CRITICAL:'cr', HIGH:'or', MEDIUM:'yw' }[sev] || ''; }
+
+  function renderTable() {
+    const rows = filtered();
+    const total = rows.length;
+    const start = (page - 1) * PER;
+    const slice = rows.slice(start, start + PER);
+    document.getElementById('tblHdr').textContent = `ACTIVE ALARMS (${total})`;
+    document.getElementById('rowRange').textContent = total ? `${start + 1}–${Math.min(start + PER, total)} of ${total}` : '0–0 of 0';
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+    slice.forEach(a => {
+      const tr = document.createElement('tr');
+      if (a.id === selId) tr.classList.add('sel');
+      const valStr = a.v !== null ? `${a.v.toFixed(1)} ${a.uv}` : '—';
+      const thrStr = a.thr || '—';
+      tr.innerHTML = `<td>${fmtHMS(a.time)}</td><td><span class="sev-badge ${a.sev.toLowerCase()}">${a.sev}</span></td><td>${a.unit}</td><td>${a.param}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${a.msg}</td><td class="vc ${vcls(a.sev)}" id="v${a.id}">${valStr}</td><td style="color:#7a8ca8">${thrStr}</td><td><span class="stat-badge">ACTIVE</span></td><td id="d${a.id}">${fmtDur(a.time)}</td><td><button class="act-btn" title="View">👁</button><button class="act-btn" title="Ack">✓</button></td>`;
+      tr.addEventListener('click', () => { selId = a.id; renderTable(); renderDetail(); });
+      tbody.appendChild(tr);
+    });
+    const pages = Math.ceil(total / PER);
+    ['p1','p2','p3'].forEach((id, i) => { const btn = document.getElementById(id); const n = i + 1; btn.textContent = n <= pages ? n : ''; btn.classList.toggle('active', page === n); btn.onclick = () => { if (n <= pages) { page = n; renderTable(); } }; });
+  }
+
+  const SEV_COLOR = { CRITICAL:'#ff4444', HIGH:'#f97316', MEDIUM:'#eab308', LOW:'#94a3b8' };
+  function renderDetail() {
+    const a = alarms.find(x => x.id === selId) || alarms[0];
+    const rows = [
+      ['Severity', `<span style="color:${SEV_COLOR[a.sev]};font-weight:700">${a.sev}</span>`],
+      ['Unit', a.unit], ['Parameter', a.param], ['Message', a.msg], ['Value', a.v !== null ? `${a.v.toFixed(1)} ${a.uv}` : '—'], ['Threshold', a.thr || '—'], ['Status', '<span style="color:#ff4444;font-weight:700">ACTIVE</span>'], ['Duration', `<span id="detDur">${fmtDur(a.time)}</span>`], ['Acknowledged', 'No'], ['Acknowledged By', '—'], ['Acknowledged At', '—'],
+    ];
+    document.getElementById('detailBody').innerHTML = rows.map(([k,v]) => `<div class="d-row"><span class="d-key">${k}</span><span class="d-val">${v}</span></div>`).join('');
+  }
+
+  function updateSummary() {
+    const { cnt, unt, tot } = getAlarmCounts();
+    document.getElementById('cCrit').textContent = cnt.CRITICAL;
+    document.getElementById('cHigh').textContent = cnt.HIGH;
+    document.getElementById('cMed').textContent = cnt.MEDIUM;
+    document.getElementById('cLow').textContent = cnt.LOW;
+    document.getElementById('cTotal').textContent = tot;
+    document.getElementById('sCrit').textContent = `Affects ${unt.CRITICAL.size} Unit${unt.CRITICAL.size !== 1 ? 's' : ''}`;
+    document.getElementById('sHigh').textContent = `Affects ${unt.HIGH.size} Unit${unt.HIGH.size !== 1 ? 's' : ''}`;
+    document.getElementById('sMed').textContent = `Affects ${unt.MEDIUM.size} Unit${unt.MEDIUM.size !== 1 ? 's' : ''}`;
+    document.getElementById('sLow').textContent = `Affects ${unt.LOW.size} Unit${unt.LOW.size !== 1 ? 's' : ''}`;
+    if (alarmsDonut) { alarmsDonut.data.datasets[0].data = [cnt.CRITICAL, cnt.HIGH, cnt.MEDIUM, cnt.LOW]; alarmsDonut.update('none'); }
+    const p = sev => tot > 0 ? Math.round(cnt[sev] / tot * 100) : 0;
+    document.getElementById('dlCrit').textContent = `Critical  ${cnt.CRITICAL} (${p('CRITICAL')}%)`;
+    document.getElementById('dlHigh').textContent = `High      ${cnt.HIGH} (${p('HIGH')}%)`;
+    document.getElementById('dlMed').textContent = `Medium ${cnt.MEDIUM} (${p('MEDIUM')}%)`;
+    document.getElementById('dlLow').textContent = `Low      ${cnt.LOW} (${p('LOW')}%)`;
+    document.getElementById('dlTotal').textContent = tot;
+  }
+
+  const cu = { 1:{ t:77.3, p:20.0, tLo:74, tHi:84, pLo:17, pHi:22 }, 2:{ t:76.7, p:19.9, tLo:73, tHi:82, pLo:18, pHi:22 }, 3:{ t:77.1, p:19.8, tLo:74, tHi:80, pLo:18, pHi:22 }, 4:{ t:78.3, p:20.1, tLo:75, tHi:84, pLo:16, pHi:22 } };
+  let alarmsTickCounter = 0;
+  let nextId = 100;
+  const NEW_ALARM_TEMPLATES = [
+    { sev:'LOW',    param:'Temperature', msg:'Temperature deviation detected',    uv:'K',    thr:'> 75.0 K',    vRange:[75.1,76.5] },
+    { sev:'LOW',    param:'Pressure',    msg:'Pressure slightly elevated',        uv:'atm',  thr:'> 20.5 atm',  vRange:[20.6,21.0] },
+    { sev:'LOW',    param:'Flow',        msg:'Flow slightly below nominal',       uv:'kg/s', thr:'< 10.0 kg/s', vRange:[9.4,9.9] },
+    { sev:'LOW',    param:'Vibration',   msg:'Vibration above threshold',         uv:'mm/s', thr:'> 2.0 mm/s',  vRange:[2.1,2.4] },
+    { sev:'MEDIUM', param:'Temperature', msg:'Temperature approaching high limit',uv:'K',    thr:'> 78.0 K',    vRange:[77.0,78.0] },
+  ];
+
+  function doAlarmsTick() {
+    alarmsTickCounter++;
+    alarms.forEach(a => { const el = document.getElementById('d' + a.id); if (el) el.textContent = fmtDur(a.time); });
+    const detEl = document.getElementById('detDur');
+    if (detEl) { const sel = alarms.find(a => a.id === selId); if (sel) detEl.textContent = fmtDur(sel.time); }
+    if (alarmsTickCounter % 3 === 0) {
+      [1,2,3,4].forEach(n => { cu[n].t = alarmsRw(cu[n].t, cu[n].tLo, cu[n].tHi, 0.12); cu[n].p = alarmsRw(cu[n].p, cu[n].pLo, cu[n].pHi, 0.07); document.getElementById('cu' + n + 't').textContent = cu[n].t.toFixed(1) + ' K'; document.getElementById('cu' + n + 'p').textContent = cu[n].p.toFixed(1) + ' atm'; });
+      document.getElementById('voltL').textContent = alarmsRw(245.7, 244.5, 247.0, 0.1).toFixed(1) + ' kV';
+      document.getElementById('voltR').textContent = alarmsRw(246.1, 244.8, 247.5, 0.1).toFixed(1) + ' kV';
+      alarms.forEach(a => { if (a.v === null) return; const step = { K:0.08, atm:0.05, 'kg/s':0.06, 'mm/s':0.02 }[a.uv] || 0.05; a.v = alarmsRw(a.v, a.v - 0.8, a.v + 0.8, step); const el = document.getElementById('v' + a.id); if (el) el.textContent = `${a.v.toFixed(1)} ${a.uv}`; });
+      renderDetail();
+    }
+    if (alarmsTickCounter % 18 === 0) {
+      const tpl = NEW_ALARM_TEMPLATES[Math.floor(Math.random() * NEW_ALARM_TEMPLATES.length)];
+      const unit = ['CU-1','CU-2','CU-3','CU-4'][Math.floor(Math.random() * 4)];
+      const val = +(tpl.vRange[0] + Math.random() * (tpl.vRange[1] - tpl.vRange[0])).toFixed(1);
+      alarms.unshift({ id: ++nextId, time: new Date(), sev: tpl.sev, unit, param: tpl.param, msg: tpl.msg, v: val, uv: tpl.uv, thr: tpl.thr });
+      if (alarms.length > 35) alarms.pop();
+      updateSummary();
+      renderTable();
+      const firstRow = document.querySelector('#tbody tr');
+      if (firstRow) firstRow.classList.add('new-alarm');
+    }
+  }
+
+  ['srch','sevF','unitF','statF'].forEach(id => { document.getElementById(id).addEventListener('input', () => { page = 1; renderTable(); }); });
+  document.getElementById('lastUpdate').textContent = nowHMS();
+  updateSummary();
+  renderTable();
+  renderDetail();
+  setInterval(tickOverview, 2000);
+  setInterval(doAlarmsTick, 1000);
+  setTimeout(() => { triggerAlarmState(); }, 15000);
+</script>
+</body>
+</html>
